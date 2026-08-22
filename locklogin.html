@@ -1,1 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orion OS - Login</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    
+    body { 
+      background: #000; 
+      color: #fff; 
+      height: 100vh; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center;
+      overflow: hidden; 
+    }
 
+    /* PS5 Startup Background Vibe */
+    #bg-layer {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: radial-gradient(circle at center, #1a2a40, #05080f);
+      filter: blur(20px);
+      z-index: -1;
+      animation: pulse 8s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); filter: brightness(1) blur(20px); }
+      100% { transform: scale(1.05); filter: brightness(1.2) blur(25px); }
+    }
+
+    /* Glass Container */
+    .auth-container {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 50px 60px;
+      width: 400px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      display: none; /* Toggled by JS */
+      transform: translateY(20px);
+      opacity: 0;
+      animation: slideUp 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+
+    @keyframes slideUp {
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .profile-pic {
+      width: 90px;
+      height: 90px;
+      background: linear-gradient(135deg, #00f0ff, #0055ff);
+      border-radius: 50%;
+      margin: 0 auto 20px auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 36px;
+      font-weight: bold;
+      color: #000;
+      box-shadow: 0 0 20px rgba(0,240,255,0.4);
+    }
+
+    h2 { font-size: 28px; margin-bottom: 8px; font-weight: 600; }
+    p.subtitle { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 30px; }
+
+    /* Inputs */
+    .input-group { margin-bottom: 20px; text-align: left; }
+    .input-group label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.5); margin-bottom: 8px; }
+    
+    input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #00f0ff;
+      background: rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 15px rgba(0,240,255,0.2);
+    }
+
+    /* Standard Button */
+    button {
+      width: 100%;
+      background: #fff;
+      color: #000;
+      border: none;
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 10px;
+    }
+
+    button:hover { background: #e0e0e0; transform: scale(1.02); }
+    button:active { transform: scale(0.98); }
+
+    /* Error Shake Animation */
+    .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+      40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+
+    .error-msg { color: #ff3366; font-size: 13px; margin-top: 10px; display: none; }
+
+  </style>
+</head>
+<body>
+
+  <div id="bg-layer"></div>
+
+  <!-- SETUP VIEW (First Boot Only) -->
+  <div class="auth-container" id="setup-view">
+    <div class="profile-pic">?</div>
+    <h2>Create Profile</h2>
+    <p class="subtitle">Lock this device to your identity.</p>
+
+    <div class="input-group">
+      <label>Username</label>
+      <input type="text" id="new-username" placeholder="Enter username" autocomplete="off" onfocus="playHover()">
+    </div>
+    <div class="input-group">
+      <label>4-Digit PIN</label>
+      <input type="password" id="new-pin" placeholder="••••" maxlength="4" pattern="\d*" autocomplete="new-password" onfocus="playHover()">
+    </div>
+
+    <button onclick="createAccount()">Confirm & Boot</button>
+  </div>
+
+  <!-- LOGIN VIEW (Standard Boot) -->
+  <div class="auth-container" id="login-view">
+    <div class="profile-pic" id="user-initial">P</div>
+    <h2 id="welcome-text">Welcome Back</h2>
+    <p class="subtitle">Enter your PIN to access Orion OS.</p>
+
+    <div class="input-group">
+      <input type="password" id="login-pin" placeholder="Enter PIN" maxlength="4" pattern="\d*" onfocus="playHover()">
+      <div class="error-msg" id="error-msg">Incorrect PIN. Try again.</div>
+    </div>
+
+    <button onclick="login()">Log In</button>
+  </div>
+
+  <script>
+    // Audio Synth for UI clicks
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playHover() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.05);
+    }
+
+    function playSuccess() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime); 
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.8);
+    }
+
+    function playError() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.2);
+    }
+
+    // OS Logic
+    const setupView = document.getElementById('setup-view');
+    const loginView = document.getElementById('login-view');
+    const dbKey = 'orion_os_user';
+
+    // Check if account exists on load
+    window.onload = () => {
+      const savedUser = localStorage.getItem(dbKey);
+      
+      if (savedUser) {
+        // User exists, show Lock screen
+        const user = JSON.parse(savedUser);
+        document.getElementById('user-initial').innerText = user.username.charAt(0).toUpperCase();
+        document.getElementById('welcome-text').innerText = user.username;
+        loginView.style.display = 'block';
+        document.getElementById('login-pin').focus();
+      } else {
+        // First boot, show Setup screen
+        setupView.style.display = 'block';
+        document.getElementById('new-username').focus();
+      }
+    };
+
+    function createAccount() {
+      const username = document.getElementById('new-username').value.trim();
+      const pin = document.getElementById('new-pin').value.trim();
+
+      if (username === '' || pin === '') {
+        playError();
+        return; // basic validation
+      }
+
+      // Save to local storage
+      const userData = { username: username, pin: pin };
+      localStorage.setItem(dbKey, JSON.stringify(userData));
+      
+      playSuccess();
+      
+      // Send to main OS dashboard
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 500);
+    }
+
+    function login() {
+      const inputPin = document.getElementById('login-pin').value;
+      const savedUser = JSON.parse(localStorage.getItem(dbKey));
+      const errorMsg = document.getElementById('error-msg');
+      const loginContainer = document.getElementById('login-view');
+
+      if (inputPin === savedUser.pin) {
+        // Success
+        errorMsg.style.display = 'none';
+        playSuccess();
+        loginContainer.style.opacity = 0;
+        loginContainer.style.transition = 'opacity 0.4s';
+        
+        // Boot into OS
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 500);
+      } else {
+        // Fail
+        playError();
+        document.getElementById('login-pin').value = '';
+        errorMsg.style.display = 'block';
+        
+        // Trigger CSS shake
+        loginContainer.classList.remove('shake');
+        void loginContainer.offsetWidth; // trigger reflow
+        loginContainer.classList.add('shake');
+      }
+    }
+
+    // Allow hitting 'Enter' to submit
+    document.getElementById('new-pin').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') createAccount();
+    });
+    document.getElementById('login-pin').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') login();
+    });
+
+  </script>
+</body>
+</html>
