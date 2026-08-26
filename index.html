@@ -218,3 +218,36 @@
   </script>
 </body>
 </html>
+// 1. Target the empty container box and status text
+const statusElement = document.querySelector('body'); // Adjust selector if needed
+const gameContainer = document.querySelector('.card-active') || document.querySelectorAll('div')[2]; // Target the active frame
+
+// 2. Define the Bridge function
+function launchGameBridge(gameUrl = './index.html') {
+    // Update status text dynamically
+    const statusText = document.evaluate("//*[contains(text(), 'Starting application...')]", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    if (statusText) {
+        statusText.textContent = "Application Running";
+        statusText.style.color = "#2ecc71";
+    }
+
+    // Find the empty center container box (the white-bordered card)
+    const container = document.querySelector('div[style*="border"], div:nth-child(2)') || document.body;
+
+    // Inject the game directly into the container using an iframe bridge
+    container.innerHTML = `
+        <iframe 
+            src="${gameUrl}" 
+            style="width: 100%; height: 100%; border: none; border-radius: 12px; display: block;"
+            allow="autoplay; keyboard">
+        </iframe>
+    `;
+}
+
+// 3. Auto-trigger the bridge after setup
+window.addEventListener('DOMContentLoaded', () => {
+    // Replaces 'Starting application...' with the actual live game frame
+    setTimeout(() => {
+        launchGameBridge('grand-crime-drive-vi.html'); // Put your actual game filename/path here
+    }, 500);
+});
