@@ -3,665 +3,217 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grand Crime Drive VI</title>
+    <title>Grand Crime Drive VI - Engine Core</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #87CEEB; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
-        canvas { display: block; width: 100vw; height: 100vh; }
-        
-        /* HUD STYLES */
-        #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        #minimap-container {
-            position: absolute; bottom: 20px; left: 20px; width: 200px; height: 200px;
-            border-radius: 50%; border: 4px solid #333; overflow: hidden;
-            background: rgba(0,0,0,0.5); box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #87CEEB; /* Sky blue */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        #minimap { width: 100%; height: 100%; background: #222; }
-        #money-display {
-            position: absolute; top: 20px; right: 20px; color: #2ecc71;
-            font-size: 32px; font-weight: 900; text-shadow: 2px 2px 0 #000;
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
         }
-        #wanted-level {
-            position: absolute; top: 60px; right: 20px; display: flex; gap: 5px;
+        #character-name {
+            font-size: 36px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
         }
-        .star { font-size: 30px; color: #555; text-shadow: 1px 1px 0 #000; transition: color 0.3s; }
-        .star.active { color: #f1c40f; text-shadow: 0 0 10px #f1c40f, 1px 1px 0 #000; }
-        
-        #speedometer {
-            position: absolute; bottom: 30px; right: 30px; color: white;
-            font-size: 40px; font-weight: bold; font-style: italic; text-shadow: 2px 2px 0 #000;
+        #instructions {
+            font-size: 14px;
+            color: #ffcc00;
         }
-        #speedometer span { font-size: 20px; color: #ccc; }
-        
-        #interaction-prompt {
-            position: absolute; top: 70%; left: 50%; transform: translate(-50%, -50%);
-            color: white; font-size: 24px; font-weight: bold; background: rgba(0,0,0,0.7);
-            padding: 10px 20px; border-radius: 8px; display: none; text-transform: uppercase;
-            border: 2px solid white; box-shadow: 0 0 10px rgba(255,255,255,0.5);
-        }
-
-        #mission-text {
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            color: #fff; font-size: 20px; font-weight: bold; text-shadow: 2px 2px 0 #000;
-            background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; border-bottom: 3px solid #e74c3c;
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            mix-blend-mode: difference;
+            z-index: 10;
         }
     </style>
-    <!-- Using Three.js from a stable CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-    <div id="hud">
-        <div id="mission-text">MISSION: Explore the city. Steal a car if you need to!</div>
-        <div id="minimap-container"><canvas id="minimap"></canvas></div>
-        <div id="money-display">$000,000,500</div>
-        <div id="wanted-level">
-            <div class="star" id="star1">★</div>
-            <div class="star" id="star2">★</div>
-            <div class="star" id="star3">★</div>
-            <div class="star" id="star4">★</div>
-            <div class="star" id="star5">★</div>
-        </div>
-        <div id="speedometer">0 <span>MPH</span></div>
-        <div id="interaction-prompt">Press F to enter vehicle</div>
+
+    <!-- UI Overlay -->
+    <div id="ui-layer">
+        <div id="character-name">Jace</div>
+        <div id="instructions">WASD to Move | 1, 2, 3, 4 to Switch Characters</div>
     </div>
+    <div id="crosshair"></div>
+
+    <!-- Import Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
         // ==========================================
-        // GRAND CRIME DRIVE VI - ENGINE SETUP
-        // Built exclusively for phxntom's showcase
+        // GCD VI - CORE ENGINE SETUP
         // ==========================================
 
-        const GAME_STATE = {
-            money: 500,
-            wantedLevel: 0,
-            inCar: false,
-            playerTargetCar: null
-        };
-
-        // --- Core Three.js Setup ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); // Sky blue
-        scene.fog = new THREE.FogExp2(0x87CEEB, 0.0025); // Adds realistic distance fade
+        scene.fog = new THREE.FogExp2(0x87CEEB, 0.002); // Distance fog for the city
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         
-        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // GTA V style soft shadows
         document.body.appendChild(renderer.domElement);
 
-        // --- Minimap Setup ---
-        const minimapCanvas = document.getElementById('minimap');
-        minimapCanvas.width = 200; minimapCanvas.height = 200;
-        const minimapCtx = minimapCanvas.getContext('2d');
+        // ==========================================
+        // LIGHTING & ENVIRONMENT
+        // ==========================================
         
-        // --- Lighting ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
         scene.add(ambientLight);
 
         const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        sunLight.position.set(200, 300, 100);
+        sunLight.position.set(100, 200, 50);
         sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 2048;
-        sunLight.shadow.mapSize.height = 2048;
-        sunLight.shadow.camera.near = 0.5;
-        sunLight.shadow.camera.far = 1000;
-        sunLight.shadow.camera.left = -200;
-        sunLight.shadow.camera.right = 200;
-        sunLight.shadow.camera.top = 200;
-        sunLight.shadow.camera.bottom = -200;
+        sunLight.shadow.camera.left = -100;
+        sunLight.shadow.camera.right = 100;
+        sunLight.shadow.camera.top = 100;
+        sunLight.shadow.camera.bottom = -100;
         scene.add(sunLight);
 
-        // ==========================================
-        // PROCEDURAL TEXTURE GENERATORS (No Images needed!)
-        // ==========================================
-        
-        function createRoadTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512; canvas.height = 512;
-            const ctx = canvas.getContext('2d');
-            
-            // Asphalt base
-            ctx.fillStyle = '#333333';
-            ctx.fillRect(0, 0, 512, 512);
-            
-            // Noise for realism
-            for(let i=0; i<10000; i++) {
-                ctx.fillStyle = Math.random() > 0.5 ? '#2a2a2a' : '#3a3a3a';
-                ctx.fillRect(Math.random()*512, Math.random()*512, 2, 2);
-            }
-            
-            // Lane markings
-            ctx.fillStyle = '#ffffff';
-            for(let i=0; i<512; i+=64) {
-                ctx.fillRect(246, i+16, 20, 32); // Center dashed line
-            }
-            
-            const tex = new THREE.CanvasTexture(canvas);
-            tex.wrapS = THREE.RepeatWrapping;
-            tex.wrapT = THREE.RepeatWrapping;
-            return tex;
-        }
-
-        function createBuildingTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 256; canvas.height = 256;
-            const ctx = canvas.getContext('2d');
-            
-            // Concrete base
-            ctx.fillStyle = '#7f8c8d';
-            ctx.fillRect(0, 0, 256, 256);
-            
-            // Windows
-            for(let y = 10; y < 256; y += 40) {
-                for(let x = 10; x < 256; x += 40) {
-                    ctx.fillStyle = Math.random() > 0.3 ? '#87CEEB' : '#f1c40f'; // Some lights on
-                    ctx.fillRect(x, y, 20, 30);
-                    // Window frame
-                    ctx.strokeStyle = '#2c3e50';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(x, y, 20, 30);
-                }
-            }
-            
-            const tex = new THREE.CanvasTexture(canvas);
-            tex.wrapS = THREE.RepeatWrapping;
-            tex.wrapT = THREE.RepeatWrapping;
-            return tex;
-        }
-
-        // ==========================================
-        // INPUT MANAGEMENT
-        // ==========================================
-        const keys = { w: false, a: false, s: false, d: false, space: false, f: false, shift: false };
-        let justPressedF = false;
-
-        document.addEventListener('keydown', (e) => {
-            const key = e.key.toLowerCase();
-            if (keys.hasOwnProperty(key)) {
-                if (key === 'f' && !keys.f) justPressedF = true;
-                keys[key] = true;
-            }
-            if (e.key === ' ') keys.space = true;
-        });
-
-        document.addEventListener('keyup', (e) => {
-            const key = e.key.toLowerCase();
-            if (keys.hasOwnProperty(key)) keys[key] = false;
-            if (e.key === ' ') keys.space = false;
-        });
-
-        // ==========================================
-        // ENTITY CLASSES
-        // ==========================================
-
-        class Player {
-            constructor() {
-                this.mesh = new THREE.Group();
-                
-                // Head
-                const headGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
-                const headMat = new THREE.MeshLambertMaterial({color: 0xffccaa});
-                const head = new THREE.Mesh(headGeo, headMat);
-                head.position.y = 1.7;
-                head.castShadow = true;
-                
-                // Body
-                const bodyGeo = new THREE.BoxGeometry(0.8, 1.0, 0.4);
-                const bodyMat = new THREE.MeshLambertMaterial({color: 0x2980b9}); // Blue shirt
-                const body = new THREE.Mesh(bodyGeo, bodyMat);
-                body.position.y = 0.9;
-                body.castShadow = true;
-
-                // Legs
-                const legGeo = new THREE.BoxGeometry(0.3, 0.8, 0.3);
-                const legMat = new THREE.MeshLambertMaterial({color: 0x34495e});
-                this.legL = new THREE.Mesh(legGeo, legMat);
-                this.legL.position.set(-0.2, 0.4, 0);
-                this.legL.castShadow = true;
-                
-                this.legR = new THREE.Mesh(legGeo, legMat);
-                this.legR.position.set(0.2, 0.4, 0);
-                this.legR.castShadow = true;
-
-                this.mesh.add(head);
-                this.mesh.add(body);
-                this.mesh.add(this.legL);
-                this.mesh.add(this.legR);
-                
-                this.mesh.position.set(0, 0, 0);
-                scene.add(this.mesh);
-
-                this.speed = 10;
-                this.velocity = new THREE.Vector3();
-                this.rotation = 0;
-                this.walkCycle = 0;
-            }
-
-            update(delta) {
-                if (GAME_STATE.inCar) {
-                    this.mesh.visible = false;
-                    return;
-                }
-                
-                this.mesh.visible = true;
-                let moveZ = 0;
-                let moveX = 0;
-                
-                // Sprinting
-                const currentSpeed = keys.shift ? this.speed * 1.8 : this.speed;
-
-                if (keys.w) moveZ = -1;
-                if (keys.s) moveZ = 1;
-                if (keys.a) moveX = -1;
-                if (keys.d) moveX = 1;
-
-                if (moveZ !== 0 || moveX !== 0) {
-                    const angle = Math.atan2(moveX, moveZ);
-                    this.mesh.rotation.y = angle;
-                    
-                    this.mesh.position.x += Math.sin(angle) * currentSpeed * delta;
-                    this.mesh.position.z += Math.cos(angle) * currentSpeed * delta;
-
-                    // Walk animation
-                    this.walkCycle += delta * (keys.shift ? 15 : 10);
-                    this.legL.position.z = Math.sin(this.walkCycle) * 0.3;
-                    this.legR.position.z = Math.sin(this.walkCycle + Math.PI) * 0.3;
-                } else {
-                    this.legL.position.z = 0;
-                    this.legR.position.z = 0;
-                }
-
-                // Camera follow player
-                camera.position.x = this.mesh.position.x;
-                camera.position.z = this.mesh.position.z + 15;
-                camera.position.y = 10;
-                camera.lookAt(this.mesh.position);
-            }
-        }
-
-        class Car {
-            constructor(x, z, color = 0xe74c3c, isCop = false) {
-                this.mesh = new THREE.Group();
-                this.isCop = isCop;
-
-                // Car Body
-                const bodyGeo = new THREE.BoxGeometry(2, 1, 4.5);
-                const bodyMat = new THREE.MeshLambertMaterial({color: isCop ? 0xffffff : color});
-                const body = new THREE.Mesh(bodyGeo, bodyMat);
-                body.position.y = 0.8;
-                body.castShadow = true;
-                
-                // Cabin / Windows
-                const cabinGeo = new THREE.BoxGeometry(1.8, 0.8, 2.5);
-                const cabinMat = new THREE.MeshLambertMaterial({color: 0x222222}); // Tinted windows
-                const cabin = new THREE.Mesh(cabinGeo, cabinMat);
-                cabin.position.set(0, 1.6, -0.2);
-                cabin.castShadow = true;
-
-                this.mesh.add(body);
-                this.mesh.add(cabin);
-
-                // Cop sirens
-                if (isCop) {
-                    const sirenGeo = new THREE.BoxGeometry(1.2, 0.2, 0.4);
-                    this.sirenMat = new THREE.MeshBasicMaterial({color: 0xff0000});
-                    const siren = new THREE.Mesh(sirenGeo, this.sirenMat);
-                    siren.position.set(0, 2.1, -0.2);
-                    this.mesh.add(siren);
-                    
-                    // Cop paint job stripes
-                    const stripeGeo = new THREE.BoxGeometry(2.05, 1.05, 1);
-                    const stripeMat = new THREE.MeshLambertMaterial({color: 0x000000});
-                    const stripe = new THREE.Mesh(stripeGeo, stripeMat);
-                    stripe.position.y = 0.8;
-                    this.mesh.add(stripe);
-                }
-
-                // Wheels
-                const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
-                wheelGeo.rotateZ(Math.PI / 2);
-                const wheelMat = new THREE.MeshLambertMaterial({color: 0x111111});
-                
-                this.wheels = [];
-                const wheelPositions = [
-                    [-1.1, 0.4, 1.5], [1.1, 0.4, 1.5],   // Rear
-                    [-1.1, 0.4, -1.5], [1.1, 0.4, -1.5]  // Front
-                ];
-
-                wheelPositions.forEach(pos => {
-                    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-                    wheel.position.set(...pos);
-                    wheel.castShadow = true;
-                    this.mesh.add(wheel);
-                    this.wheels.push(wheel);
-                });
-
-                this.mesh.position.set(x, 0, z);
-                scene.add(this.mesh);
-
-                // Driving Physics State
-                this.speed = 0;
-                this.maxSpeed = isCop ? 60 : 45;
-                this.acceleration = 25;
-                this.friction = 0.98;
-                this.brakePower = 50;
-                this.steering = 0;
-                this.sirenTimer = 0;
-                
-                // Drift logic
-                this.velocity = new THREE.Vector3();
-                this.angle = 0; // rotation Y
-            }
-
-            update(delta) {
-                // If it's a cop car and player is wanted, chase player
-                if (this.isCop && GAME_STATE.wantedLevel > 0) {
-                    this.sirenTimer += delta;
-                    if (this.sirenTimer > 0.2) {
-                        this.sirenMat.color.setHex(this.sirenMat.color.getHex() === 0xff0000 ? 0x0000ff : 0xff0000);
-                        this.sirenTimer = 0;
-                    }
-
-                    const target = GAME_STATE.inCar ? playerCar.mesh.position : player.mesh.position;
-                    const dx = target.x - this.mesh.position.x;
-                    const dz = target.z - this.mesh.position.z;
-                    
-                    const targetAngle = Math.atan2(dx, dz);
-                    
-                    // Simple AI steering
-                    let angleDiff = targetAngle - this.angle;
-                    // Normalize angle difference to -PI to PI
-                    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-                    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-
-                    if (angleDiff > 0.1) this.steering = 0.03;
-                    else if (angleDiff < -0.1) this.steering = -0.03;
-                    else this.steering = 0;
-
-                    this.speed += this.acceleration * delta;
-                } 
-                // Player driving logic
-                else if (GAME_STATE.inCar && playerCar === this) {
-                    if (keys.w) {
-                        this.speed += this.acceleration * delta;
-                    } else if (keys.s) {
-                        this.speed -= this.brakePower * delta;
-                    }
-                    
-                    if (keys.a) this.steering += 0.05;
-                    else if (keys.d) this.steering -= 0.05;
-                    else this.steering *= 0.8; // Auto center
-
-                    // Clamp steering
-                    this.steering = Math.max(-0.04, Math.min(0.04, this.steering));
-                } 
-                // Empty car (friction slow down)
-                else {
-                    this.steering = 0;
-                    this.speed *= 0.9;
-                }
-
-                // Apply physics constraints
-                this.speed = Math.max(-20, Math.min(this.maxSpeed, this.speed));
-                this.speed *= this.friction; // Drag
-
-                // Move vehicle based on angle
-                if (Math.abs(this.speed) > 0.1) {
-                    this.angle += this.steering * (this.speed / this.maxSpeed);
-                }
-                
-                this.mesh.rotation.y = this.angle;
-                
-                const vx = Math.sin(this.angle) * this.speed;
-                const vz = Math.cos(this.angle) * this.speed;
-
-                this.mesh.position.x += vx * delta;
-                this.mesh.position.z += vz * delta;
-
-                // Wheel spin animation
-                this.wheels.forEach((w, i) => {
-                    w.rotation.x += this.speed * delta * 0.5;
-                    // Front wheels steer
-                    if (i >= 2) w.rotation.y = this.steering * 10;
-                });
-
-                // Update HUD if player car
-                if (GAME_STATE.inCar && playerCar === this) {
-                    const displaySpeed = Math.abs(Math.floor(this.speed * 2.2)); // Fake MPH
-                    document.getElementById('speedometer').innerHTML = `${displaySpeed} <span>MPH</span>`;
-                    
-                    // Camera chase
-                    const offset = new THREE.Vector3(0, 8, 15);
-                    offset.applyAxisAngle(new THREE.Vector3(0,1,0), this.angle);
-                    camera.position.copy(this.mesh.position).add(offset);
-                    camera.lookAt(this.mesh.position);
-                }
-            }
-        }
-
-        // ==========================================
-        // WORLD GENERATION (The City)
-        // ==========================================
-        const buildingTex = createBuildingTexture();
-        const roadTex = createRoadTexture();
-        
-        const roadGeo = new THREE.PlaneGeometry(1000, 1000);
-        // Repeat texture heavily for huge map
-        roadTex.repeat.set(50, 50);
-        const roadMat = new THREE.MeshLambertMaterial({map: roadTex});
-        const ground = new THREE.Mesh(roadGeo, roadMat);
+        // Ground (Lakefront City Concrete)
+        const groundGeo = new THREE.PlaneGeometry(1000, 1000);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         scene.add(ground);
 
-        const buildings = [];
-        const buildingMat = new THREE.MeshLambertMaterial({map: buildingTex});
+        // ==========================================
+        // CITY GENERATOR (Procedural Cleveland Map)
+        // ==========================================
         
-        // Procedurally generate a massive city grid
-        for (let x = -400; x <= 400; x += 60) {
-            for (let z = -400; z <= 400; z += 60) {
-                // Leave gaps for roads
-                if (Math.abs(x) < 20 || Math.abs(z) < 20) continue; 
-                if (Math.random() > 0.8) continue; // Random empty lots
-                
-                const width = 20 + Math.random() * 20;
-                const depth = 20 + Math.random() * 20;
-                const height = 15 + Math.random() * 60; // Skyscrapers!
+        // This generates placeholder blocks. Later, you replace these with loaded 3D models!
+        const buildingGeo = new THREE.BoxGeometry(1, 1, 1);
+        const buildingMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
 
-                const bGeo = new THREE.BoxGeometry(width, height, depth);
-                const building = new THREE.Mesh(bGeo, buildingMat);
-                
-                building.position.set(x + (Math.random()*10 - 5), height / 2, z + (Math.random()*10 - 5));
-                building.castShadow = true;
-                building.receiveShadow = true;
-                
-                scene.add(building);
-                buildings.push({mesh: building, radius: Math.max(width, depth) / 2});
-            }
-        }
-
-        // ==========================================
-        // GAME STATE & INITIALIZATION
-        // ==========================================
-        const player = new Player();
-        const cars = [];
-        let playerCar = null;
-
-        // Spawn civilian cars
-        for(let i=0; i<15; i++) {
-            const colors = [0x3498db, 0xe74c3c, 0x2ecc71, 0x9b59b6, 0xf1c40f, 0x000000, 0xffffff];
-            const randColor = colors[Math.floor(Math.random() * colors.length)];
-            const cx = (Math.random() - 0.5) * 200;
-            const cz = (Math.random() - 0.5) * 200;
-            cars.push(new Car(cx, cz, randColor, false));
-        }
-
-        // Spawn a guaranteed car right next to player to "steal"
-        const starterCar = new Car(5, 5, 0xf1c40f, false);
-        cars.push(starterCar);
-
-        function updateWantedLevel(level) {
-            GAME_STATE.wantedLevel = Math.min(level, 5);
-            for(let i=1; i<=5; i++) {
-                const star = document.getElementById(`star${i}`);
-                if (i <= GAME_STATE.wantedLevel) star.classList.add('active');
-                else star.classList.remove('active');
-            }
-            // Spawn cops!
-            if (GAME_STATE.wantedLevel > 0) {
-                document.getElementById('mission-text').innerText = "WANTED! Outrun the cops!";
-                document.getElementById('mission-text').style.borderColor = "#3498db";
-                
-                // Spawn a cop near player
-                const pPos = GAME_STATE.inCar ? playerCar.mesh.position : player.mesh.position;
-                const cop = new Car(pPos.x + 40, pPos.z + 40, 0xffffff, true);
-                cars.push(cop);
-            }
-        }
-
-        // ==========================================
-        // MAIN GAME LOOP
-        // ==========================================
-        const clock = new THREE.Clock();
-
-        function checkInteractions() {
-            const prompt = document.getElementById('interaction-prompt');
-            GAME_STATE.playerTargetCar = null;
-
-            if (GAME_STATE.inCar) {
-                prompt.style.display = 'block';
-                prompt.innerText = "Press F to Exit Vehicle";
-                
-                if (justPressedF) {
-                    // Get out of car
-                    GAME_STATE.inCar = false;
-                    player.mesh.position.copy(playerCar.mesh.position);
-                    player.mesh.position.x -= 3; // Hop out to the left
-                    playerCar = null;
-                    document.getElementById('speedometer').innerHTML = `0 <span>MPH</span>`;
-                }
-            } else {
-                let nearestCar = null;
-                let minDist = 6;
-
-                // Find nearest car to jack
-                cars.forEach(car => {
-                    const dist = player.mesh.position.distanceTo(car.mesh.position);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        nearestCar = car;
-                    }
-                });
-
-                if (nearestCar) {
-                    prompt.style.display = 'block';
-                    prompt.innerText = nearestCar.isCop ? "Press F to Steal Police Cruiser!" : "Press F to Steal Vehicle";
-                    GAME_STATE.playerTargetCar = nearestCar;
-
-                    if (justPressedF) {
-                        // Grand Theft Auto!
-                        GAME_STATE.inCar = true;
-                        playerCar = nearestCar;
-                        
-                        // Stealing a car gives you a wanted level!
-                        if (GAME_STATE.wantedLevel === 0) {
-                            updateWantedLevel(1);
-                        }
-                        // Stealing a COP CAR is instant 3 stars
-                        if (nearestCar.isCop && GAME_STATE.wantedLevel < 3) {
-                            updateWantedLevel(3);
-                        }
-                    }
-                } else {
-                    prompt.style.display = 'none';
-                }
-            }
-            justPressedF = false; // Reset toggle
-        }
-
-        function drawMinimap() {
-            minimapCtx.clearRect(0, 0, 200, 200);
+        for (let i = 0; i < 300; i++) {
+            const building = new THREE.Mesh(buildingGeo, buildingMat);
             
-            const pPos = GAME_STATE.inCar ? playerCar.mesh.position : player.mesh.position;
-            const scale = 0.5;
-
-            // Draw roads (simplified grid for minimap)
-            minimapCtx.fillStyle = '#444';
-            for(let i=0; i<10; i++) {
-                minimapCtx.fillRect(i*30 - (pPos.x*scale)%30, 0, 5, 200);
-                minimapCtx.fillRect(0, i*30 - (pPos.z*scale)%30, 200, 5);
+            // Random sizes for skyscrapers and small shops
+            const width = Math.random() * 10 + 5;
+            const height = Math.random() * 40 + 10;
+            const depth = Math.random() * 10 + 5;
+            
+            building.scale.set(width, height, depth);
+            
+            // Random positions across the massive map
+            building.position.x = (Math.random() - 0.5) * 400;
+            building.position.z = (Math.random() - 0.5) * 400;
+            building.position.y = height / 2;
+            
+            building.castShadow = true;
+            building.receiveShadow = true;
+            
+            // Create a simple street grid gap
+            if (Math.abs(building.position.x) > 20 && Math.abs(building.position.z) > 20) {
+                scene.add(building);
             }
-
-            // Draw player
-            minimapCtx.fillStyle = '#2ecc71';
-            minimapCtx.beginPath();
-            minimapCtx.arc(100, 100, 5, 0, Math.PI*2);
-            minimapCtx.fill();
-
-            // Draw cops
-            cars.forEach(car => {
-                if (car.isCop) {
-                    const dx = (car.mesh.position.x - pPos.x) * scale;
-                    const dz = (car.mesh.position.z - pPos.z) * scale;
-                    if (Math.abs(dx) < 100 && Math.abs(dz) < 100) {
-                        minimapCtx.fillStyle = (Date.now() % 500 < 250) ? 'red' : 'blue';
-                        minimapCtx.beginPath();
-                        minimapCtx.arc(100 + dx, 100 + dz, 4, 0, Math.PI*2);
-                        minimapCtx.fill();
-                    }
-                }
-            });
         }
 
-        function collisionDetection() {
-            const activePos = GAME_STATE.inCar ? playerCar.mesh.position : player.mesh.position;
-            const radius = GAME_STATE.inCar ? 2.5 : 0.5;
+        // ==========================================
+        // CHARACTER SYSTEM & CONTROLLER
+        // ==========================================
+        
+        const characters = {
+            1: { name: "Jace", color: 0xff0000, speed: 0.4 }, // Red, Fast
+            2: { name: "Emily", color: 0x00ff00, speed: 0.35 }, // Green, Nimble
+            3: { name: "Amelia", color: 0x0000ff, speed: 0.3 }, // Blue, Tactical
+            4: { name: "James", color: 0xffcc00, speed: 0.25 }  // Gold, Heavy tank
+        };
 
-            buildings.forEach(b => {
-                const dist = activePos.distanceTo(b.mesh.position);
-                // Simple cylinder collision approximation
-                if (dist < b.radius + radius) {
-                    // Push out
-                    const dir = activePos.clone().sub(b.mesh.position).normalize();
-                    activePos.add(dir.multiplyScalar(1)); 
-                    if (GAME_STATE.inCar) playerCar.speed *= 0.5; // Crash penalty
-                }
-            });
+        let currentPlayer = characters[1];
+
+        // Player Mesh (Placeholder for real 3D models)
+        const playerGeo = new THREE.BoxGeometry(2, 4, 2);
+        let playerMat = new THREE.MeshStandardMaterial({ color: currentPlayer.color });
+        const player = new THREE.Mesh(playerGeo, playerMat);
+        player.position.y = 2;
+        player.castShadow = true;
+        scene.add(player);
+
+        // Camera setup (3rd Person Follow)
+        const cameraOffset = new THREE.Vector3(0, 10, -15);
+
+        // ==========================================
+        // INPUT CONTROLS
+        // ==========================================
+        
+        const keys = { w: false, a: false, s: false, d: false };
+
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (keys.hasOwnProperty(key)) keys[key] = true;
+
+            // Character Switching Logic
+            if (['1', '2', '3', '4'].includes(key)) {
+                switchCharacter(parseInt(key));
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (keys.hasOwnProperty(key)) keys[key] = false;
+        });
+
+        function switchCharacter(id) {
+            currentPlayer = characters[id];
+            
+            // Update UI
+            document.getElementById('character-name').innerText = currentPlayer.name;
+            document.getElementById('character-name').style.color = '#' + currentPlayer.color.toString(16).padStart(6, '0');
+            
+            // Update Player Model Color (This is where you'd swap the actual 3D mesh later)
+            player.material.color.setHex(currentPlayer.color);
+            
+            console.log(`Switched to ${currentPlayer.name}.`); // Little debug log for us
         }
 
+        // ==========================================
+        // GAME LOOP (Physics & Rendering)
+        // ==========================================
+        
         function animate() {
             requestAnimationFrame(animate);
-            const delta = Math.min(clock.getDelta(), 0.1); // Cap delta to prevent huge jumps on lag
 
-            player.update(delta);
-            cars.forEach(car => car.update(delta));
-            
-            checkInteractions();
-            collisionDetection();
-            drawMinimap();
+            // Basic Movement Logic
+            if (keys.w) player.translateZ(currentPlayer.speed);
+            if (keys.s) player.translateZ(-currentPlayer.speed);
+            if (keys.a) player.rotation.y += 0.05;
+            if (keys.d) player.rotation.y -= 0.05;
+
+            // Update Camera to follow player (3rd Person view)
+            const relativeCameraOffset = cameraOffset.clone().applyMatrix4(player.matrixWorld);
+            camera.position.lerp(relativeCameraOffset, 0.1); // Smooth camera tracking
+            camera.lookAt(player.position);
 
             renderer.render(scene, camera);
         }
 
-        // Start the engine
-        animate();
-
-        // Responsive window scaling
+        // Handle Window Resizing
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Earn money randomly for flexing your coding skills
-        setInterval(() => {
-            if (GAME_STATE.inCar && playerCar.speed > 30) {
-                GAME_STATE.money += 10;
-                document.getElementById('money-display').innerText = `$${String(GAME_STATE.money).padStart(9, '0')}`;
-            }
-        }, 1000);
-
+        animate(); // Kick off the engine
     </script>
 </body>
 </html>
