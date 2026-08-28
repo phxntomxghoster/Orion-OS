@@ -1,253 +1,427 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Orion OS - Next Gen</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    
-    body { 
-      background: #0a0a0a; 
-      color: #fff; 
-      height: 100vh; 
-      overflow: hidden; 
-      display: flex; 
-      flex-direction: column; 
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orion OS</title>
+    <style>
+        :root {
+            --bg-dark: #0d0e12;
+            --panel-bg: #16181f;
+            --accent-blue: #00d2ff;
+            --accent-gold: #ffcc00;
+            --text-main: #f0f0f0;
+            --text-muted: #8a8d9b;
+        }
 
-    /* Dynamic Background */
-    #bg-layer {
-      position: absolute;
-      top: 0; left: 0; width: 100vw; height: 100vh;
-      background: radial-gradient(circle at top left, #2b3a4a, #0a0c10);
-      background-size: cover;
-      background-position: center;
-      filter: blur(15px) brightness(0.6);
-      transition: background 0.8s ease, filter 0.8s ease;
-      z-index: -1;
-    }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
 
-    /* Top Left Status Bar */
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding: 40px 60px;
-      z-index: 10;
-    }
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
 
-    .nav-tabs { display: flex; gap: 30px; font-size: 20px; font-weight: 500; }
-    .nav-tabs span { cursor: pointer; color: rgba(255,255,255,0.5); transition: 0.3s; padding-bottom: 5px; }
-    .nav-tabs span.active { color: #fff; border-bottom: 2px solid #fff; }
+        /* Top Navigation Bar */
+        #top-bar {
+            height: 50px;
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid #2a2d3d;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
 
-    /* Top Right Profile & Time */
-    .system-status { display: flex; align-items: center; gap: 20px; font-size: 18px; }
-    .profile-pic { width: 40px; height: 40px; background: #00f0ff; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: #000; box-shadow: 0 0 15px rgba(0,240,255,0.4); }
+        .brand {
+            font-weight: 900;
+            font-size: 20px;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-    /* Main Content (Horizontal PS5 Scroll) */
-    .main-content { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 60px 80px 60px; z-index: 10; }
-    
-    .game-info { margin-bottom: 20px; opacity: 1; transition: opacity 0.3s; }
-    .game-logo-text { font-size: 42px; font-weight: 700; text-shadow: 2px 2px 20px rgba(0,0,0,0.8); margin-bottom: 8px; letter-spacing: 1px; }
-    .game-meta { font-size: 14px; color: rgba(255,255,255,0.7); display: flex; gap: 15px; }
+        .brand span {
+            color: var(--accent-blue);
+        }
 
-    .game-carousel { 
-      display: flex; 
-      gap: 15px; 
-      align-items: flex-end; 
-      height: 250px;
-    }
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
 
-    /* PS5 Style Expanding Cards */
-    .game-card { 
-      width: 120px; 
-      height: 120px; 
-      border-radius: 20px; 
-      background-size: cover;
-      background-position: center;
-      cursor: pointer; 
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-      border: 2px solid transparent;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-      filter: brightness(0.7);
-    }
+        .role-tag {
+            background: #2a2d3d;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--accent-blue);
+        }
 
-    .game-card:hover { filter: brightness(1); }
+        .title-tag {
+            background: #3d351e;
+            color: var(--accent-gold);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
 
-    /* The Active Focused Game */
-    .game-card.active { 
-      width: 220px; 
-      height: 220px; 
-      border: 3px solid #fff; 
-      filter: brightness(1);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-      transform: translateY(-10px);
-    }
-  </style>
+        /* Main Workspace Layout */
+        #workspace {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            gap: 15px;
+            padding: 15px;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border-radius: 12px;
+            border: 1px solid #2a2d3d;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        h3 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            border-bottom: 1px solid #2a2d3d;
+            padding-bottom: 8px;
+        }
+
+        /* Controls & Performance Settings */
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        select, input {
+            background: #222533;
+            border: 1px solid #3a3f55;
+            color: var(--text-main);
+            padding: 8px;
+            border-radius: 6px;
+            outline: none;
+        }
+
+        /* Game Launcher Box */
+        #game-frame-container {
+            background: #000;
+            border-radius: 10px;
+            border: 2px solid #2a2d3d;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #game-placeholder {
+            text-align: center;
+        }
+
+        /* Download Telemetry Simulation */
+        .download-box {
+            background: #222533;
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #111;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-blue), #0072ff);
+            transition: width 0.3s;
+        }
+
+        .download-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* Chat Panel */
+        #chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .chat-msg {
+            background: #222533;
+            padding: 8px 10px;
+            border-radius: 6px;
+        }
+
+        .chat-msg .sender {
+            font-weight: bold;
+            color: var(--accent-blue);
+            margin-bottom: 2px;
+        }
+
+        /* Panic Decoy Screen Overlay */
+        #panic-decoy {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #ffffff;
+            color: #000000;
+            z-index: 99999;
+            display: none;
+            padding: 40px;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Pause Menu Overlay */
+        #pause-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(13, 14, 18, 0.95);
+            backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .split-o-logo {
+            font-size: 64px;
+            font-weight: 900;
+            letter-spacing: 6px;
+            color: var(--accent-gold);
+        }
+
+        .split-o-logo span {
+            color: var(--accent-blue);
+        }
+
+        .pause-menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 180px);
+            gap: 15px;
+        }
+
+        .pause-btn {
+            background: #222533;
+            border: 1px solid #3a3f55;
+            color: var(--text-main);
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.1s, border-color 0.2s;
+        }
+
+        .pause-btn:hover {
+            transform: scale(1.03);
+            border-color: var(--accent-blue);
+        }
+    </style>
 </head>
 <body>
 
-  <!-- Dynamic blurred background -->
-  <div id="bg-layer"></div>
-
-  <div class="top-bar">
-    <div class="nav-tabs">
-      <span class="active">Games</span>
-      <span onclick="playHoverSound()">App Store</span>
-    </div>
-    <div class="system-status">
-      <span>( O ) ORION</span>
-      <span id="clock">12:00 PM</span>
-      <div class="profile-pic">P</div>
-    </div>
-  </div>
-
-  <div class="main-content">
-    <div class="game-info" id="game-info">
-      <div class="game-logo-text" id="game-title">Select a Game</div>
-      <div class="game-meta">
-        <span>PS5 Version</span> • <span id="game-status">Ready to Play</span> • <span>Role: Slayer</span>
-      </div>
+    <!-- Top Navigation Bar -->
+    <div id="top-bar">
+        <div class="brand">(<span>O</span>) ORION OS</div>
+        <div class="user-badge">
+            <span>phxntom</span>
+            <span class="role-tag">Owner</span>
+            <span class="title-tag">Slayer</span>
+        </div>
     </div>
 
-    <div class="game-carousel">
-      <!-- Game Cards -->
-      <div class="game-card active" data-title="Fallin Bomb Shell" data-bg="https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1000&q=80" style="background-image: url('https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=400&q=80');"></div>
-      
-      <div class="game-card" data-title="Grand Crime Drive VI" data-bg="https://images.unsplash.com/photo-1605901309584-818e25960b8f?auto=format&fit=crop&w=1000&q=80" style="background-image: url('https://images.unsplash.com/photo-1605901309584-818e25960b8f?auto=format&fit=crop&w=400&q=80');"></div>
-      
-      <div class="game-card" data-title="Borlox" data-bg="https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1000&q=80" style="background-image: url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=400&q=80');"></div>
-      
-      <div class="game-card" data-title="NightFort" data-bg="https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=1000&q=80" style="background-image: url('https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=400&q=80');"></div>
+    <!-- Workspace Grid Layout -->
+    <div id="workspace">
+
+        <!-- Left Panel: Settings & Workspace Links -->
+        <div class="panel">
+            <h3>System Settings</h3>
+            
+            <div class="setting-group">
+                <label>Resolution & Performance</label>
+                <select id="res-selector" onchange="updateResolution()">
+                    <option value="1080p">1080p @ 120 FPS</option>
+                    <option value="1440p">1440p @ 60 FPS</option>
+                    <option value="4K">4K @ 30 FPS</option>
+                    <option value="8K">8K @ 15 FPS</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label>Max Frame Rate Cap (75 - 175 FPS)</label>
+                <input type="range" id="fps-slider" min="75" max="175" value="120" oninput="document.getElementById('fps-val').innerText = this.value + ' FPS'">
+                <span id="fps-val" style="font-size:12px; color:var(--text-muted);">120 FPS</span>
+            </div>
+
+            <h3>Workspace Integrations</h3>
+            <button class="pause-btn" style="padding: 10px;" onclick="window.open('https://drive.google.com', '_blank')">Google Workspace</button>
+            <button class="pause-btn" style="padding: 10px;" onclick="window.open('https://microsoft365.com', '_blank')">Microsoft 365</button>
+
+            <h3>Panic Page Content</h3>
+            <div class="setting-group">
+                <label>Editable Decoy Page Text</label>
+                <input type="text" id="panic-decoy-text" value="Diagnostic Math Evaluation: Solve 14x + 7 = 105" oninput="updatePanicDecoy()">
+            </div>
+        </div>
+
+        <!-- Center Panel: Game Display Box -->
+        <div id="game-frame-container">
+            <div id="game-placeholder">
+                <h2 style="color: var(--accent-gold);">Grand Crime Drive VI</h2>
+                <p style="color: var(--text-muted); margin-top: 5px;">Press ESC anytime to open the Orion Pause Menu</p>
+            </div>
+        </div>
+
+        <!-- Right Panel: Downloads & Chat -->
+        <div class="panel">
+            <h3>Offline Downloads</h3>
+            <div class="download-box">
+                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:12px;">
+                    <span>Grand Crime Drive VI</span>
+                    <span id="dl-perc">0%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="dl-fill"></div></div>
+                <div class="download-stats">
+                    <span id="dl-speed">0 MB/s</span>
+                    <span>Offline Hub</span>
+                </div>
+            </div>
+
+            <h3>Chatbox (#public-main)</h3>
+            <div id="chat-messages">
+                <div class="chat-msg"><div class="sender">System</div>Welcome to Orion OS. Chat filtering is active.</div>
+            </div>
+            <input type="text" id="chat-input" placeholder="Type a message..." onkeydown="handleChat(event)">
+        </div>
+
     </div>
-  </div>
 
-  <script>
-    // --- AUDIO SYNTHESIZER (No MP3s needed, pure browser sound) ---
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    <!-- Panic Keybind Decoy Screen (Triggered via Fn + Ctrl + Opt + Cmd + H) -->
+    <div id="panic-decoy">
+        <h2 id="decoy-header">Diagnostic Math Evaluation</h2>
+        <p style="margin-top: 10px;" id="decoy-body">Solve 14x + 7 = 105 for x.</p>
+        <input type="text" placeholder="Enter solution..." style="margin-top:20px; width: 300px; padding:10px; border:1px solid #000;">
+    </div>
 
-    // 1. Hover Sound: Soft, quick, low PS5 'thud'
-    function playHoverSound() {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1); // Pitch drop
-      
-      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); // Quick fade
-      
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.1);
-    }
+    <!-- Orion OS Pause Menu Overlay -->
+    <div id="pause-overlay">
+        <div class="split-o-logo">(<span>O</span>) ORION OS</div>
+        <div class="pause-menu-grid">
+            <div class="pause-btn" onclick="togglePauseMenu()">Resume Game</div>
+            <div class="pause-btn" onclick="alert('Opening App Store...')">App Store</div>
+            <div class="pause-btn" onclick="alert('Accessing Temp Storage...')">Temp Storage</div>
+            <div class="pause-btn" onclick="alert('Opening Messaging Hub...')">Messaging</div>
+        </div>
+        <div style="color: var(--text-muted); font-size: 13px; margin-top: 10px;">
+            Installed: Grand Crime Drive VI | Fallin Bomb Shell | Borlox | NightFort
+        </div>
+    </div>
 
-    // 2. Select Sound: Crisp next-gen chime (Shifted up to an 'A' note)
-    function playSelectSound() {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, audioCtx.currentTime); // 880Hz = A5 note
-      
-      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6); // Long smooth tail
-      
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.6);
-    }
+    <script>
+        // --- 1. Panic Keybind Handler (Fn + Ctrl + Opt + Cmd + H) ---
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'h' && e.ctrlKey && e.altKey && e.metaKey) {
+                e.preventDefault();
+                const decoy = document.getElementById('panic-decoy');
+                decoy.style.display = (decoy.style.display === 'block') ? 'none' : 'block';
+            }
+            if (e.key === 'Escape') {
+                togglePauseMenu();
+            }
+        });
 
-    // --- UI LOGIC ---
-    const cards = document.querySelectorAll('.game-card');
-    const bgLayer = document.getElementById('bg-layer');
-    const titleText = document.getElementById('game-title');
-    const infoBox = document.getElementById('game-info');
-
-    // Initialize first background
-    bgLayer.style.backgroundImage = `url('${cards[0].getAttribute('data-bg')}')`;
-
-    cards.forEach(card => {
-      // Hover event
-      card.addEventListener('mouseenter', () => {
-        if (!card.classList.contains('active')) {
-          playHoverSound();
-          
-          // Remove active from all
-          cards.forEach(c => c.classList.remove('active'));
-          // Add active to current
-          card.classList.add('active');
-          
-          // Update Text & Background
-          infoBox.style.opacity = 0;
-          setTimeout(() => {
-            titleText.innerText = card.getAttribute('data-title');
-            bgLayer.style.backgroundImage = `url('${card.getAttribute('data-bg')}')`;
-            infoBox.style.opacity = 1;
-          }, 150);
+        function updatePanicDecoy() {
+            const customText = document.getElementById('panic-decoy-text').value;
+            document.getElementById('decoy-body').innerText = customText;
         }
-      });
 
-      // Click event
-      card.addEventListener('click', () => {
-        playSelectSound();
-        // Here you would trigger the game load sequence
-        document.getElementById('game-status').innerText = 'Starting application...';
-      });
-    });
+        // --- 2. Pause Menu Overlay ---
+        function togglePauseMenu() {
+            const overlay = document.getElementById('pause-overlay');
+            overlay.style.display = (overlay.style.display === 'flex') ? 'none' : 'flex';
+        }
 
-    // Simple Clock
-    setInterval(() => {
-      const now = new Date();
-      document.getElementById('clock').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    }, 1000);
+        // --- 3. Chatbox Filtering ---
+        const prohibitedWords = ["badword1", "badword2", "offensive"]; // Modular filter list
+        function handleChat(e) {
+            if (e.key === 'Enter') {
+                const input = document.getElementById('chat-input');
+                let text = input.value.trim();
+                if (!text) return;
 
-    // Hardcoded Panic Keybind (Ctrl + Opt + Cmd + H)
-    window.addEventListener('keydown', (e) => {
-      if (e.key.toLowerCase() === 'h' && e.ctrlKey && e.altKey && e.metaKey) {
-        e.preventDefault();
-        window.location.href = 'Panic.html'; 
-      }
-    });
-  </script>
+                // Basic offensive language filter replacement
+                prohibitedWords.forEach(word => {
+                    const regex = new RegExp(word, 'gi');
+                    text = text.replace(regex, "****");
+                });
+
+                const chatMsg = document.createElement('div');
+                chatMsg.className = 'chat-msg';
+                chatMsg.innerHTML = `<div class="sender">phxntom [Owner]</div>${text}`;
+                document.getElementById('chat-messages').appendChild(chatMsg);
+                input.value = '';
+            }
+        }
+
+        // --- 4. Simulated Download Progress Telemetry ---
+        let dlProgress = 0;
+        setInterval(() => {
+            if (dlProgress < 100) {
+                dlProgress += Math.floor(Math.random() * 5) + 1;
+                if (dlProgress > 100) dlProgress = 100;
+                document.getElementById('dl-fill').style.width = dlProgress + '%';
+                document.getElementById('dl-perc').innerText = dlProgress + '%';
+                document.getElementById('dl-speed').innerText = (Math.random() * (45.5 - 12.1) + 12.1).toFixed(1) + ' MB/s';
+            }
+        }, 800);
+
+        // --- 5. Resolution Switcher ---
+        function updateResolution() {
+            const res = document.getElementById('res-selector').value;
+            console.log("Resolution set to: " + res);
+        }
+    </script>
 </body>
 </html>
-// 1. Target the empty container box and status text
-const statusElement = document.querySelector('body'); // Adjust selector if needed
-const gameContainer = document.querySelector('.card-active') || document.querySelectorAll('div')[2]; // Target the active frame
-
-// 2. Define the Bridge function
-function launchGameBridge(gameUrl = './index.html') {
-    // Update status text dynamically
-    const statusText = document.evaluate("//*[contains(text(), 'Starting application...')]", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-    if (statusText) {
-        statusText.textContent = "Application Running";
-        statusText.style.color = "#2ecc71";
-    }
-
-    // Find the empty center container box (the white-bordered card)
-    const container = document.querySelector('div[style*="border"], div:nth-child(2)') || document.body;
-
-    // Inject the game directly into the container using an iframe bridge
-    container.innerHTML = `
-        <iframe 
-            src="${gameUrl}" 
-            style="width: 100%; height: 100%; border: none; border-radius: 12px; display: block;"
-            allow="autoplay; keyboard">
-        </iframe>
-    `;
-}
-
-// 3. Auto-trigger the bridge after setup
-window.addEventListener('DOMContentLoaded', () => {
-    // Replaces 'Starting application...' with the actual live game frame
-    setTimeout(() => {
-        launchGameBridge('grand-crime-drive-vi.html'); // Put your actual game filename/path here
-    }, 500);
-});
