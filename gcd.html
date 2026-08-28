@@ -3,167 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grand Crime Drive VI - Engine Core</title>
+    <title>GCD VI - Engine with Cars & Collisions</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #87CEEB; /* Sky blue */
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        #ui-layer {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            z-index: 10;
-        }
-        #character-name {
-            font-size: 36px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 5px;
-        }
-        #instructions {
-            font-size: 14px;
-            color: #ffcc00;
-        }
-        #crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 10px;
-            height: 10px;
-            background: white;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            mix-blend-mode: difference;
-            z-index: 10;
-        }
+        body { margin: 0; overflow: hidden; background-color: #87CEEB; font-family: 'Segoe UI', sans-serif; }
+        #ui-layer { position: absolute; top: 20px; left: 20px; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); z-index: 10; }
+        #character-name { font-size: 36px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
+        #instructions { font-size: 14px; color: #ffcc00; }
+        #interaction-prompt { position: absolute; bottom: 20%; left: 50%; transform: translateX(-50%); font-size: 24px; font-weight: bold; color: #fff; display: none; text-shadow: 2px 2px 4px #000; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; background: white; border-radius: 50%; transform: translate(-50%, -50%); mix-blend-mode: difference; z-index: 10; }
     </style>
 </head>
 <body>
 
-    <!-- UI Overlay -->
     <div id="ui-layer">
         <div id="character-name">Jace</div>
-        <div id="instructions">WASD to Move | 1, 2, 3, 4 to Switch Characters</div>
+        <div id="instructions">WASD: Move | 1-4: Switch Character | F: Enter/Exit Car</div>
     </div>
+    <div id="interaction-prompt">Press 'F' to Drive</div>
     <div id="crosshair"></div>
 
-    <!-- Import Three.js -->
+    <!-- Three.js and GLTFLoader (For when you want real downloaded models) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
     <script>
-        // ==========================================
-        // GCD VI - CORE ENGINE SETUP
-        // ==========================================
-
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x87CEEB, 0.002); // Distance fog for the city
+        scene.fog = new THREE.FogExp2(0x87CEEB, 0.002);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // ==========================================
-        // LIGHTING & ENVIRONMENT
-        // ==========================================
-        
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.7);
         scene.add(ambientLight);
-
         const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
         sunLight.position.set(100, 200, 50);
         sunLight.castShadow = true;
-        sunLight.shadow.camera.left = -100;
-        sunLight.shadow.camera.right = 100;
-        sunLight.shadow.camera.top = 100;
-        sunLight.shadow.camera.bottom = -100;
         scene.add(sunLight);
 
-        // Ground (Lakefront City Concrete)
-        const groundGeo = new THREE.PlaneGeometry(1000, 1000);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
+        // Ground
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({ color: 0x222222 }));
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         scene.add(ground);
 
         // ==========================================
-        // CITY GENERATOR (Procedural Cleveland Map)
+        // SOLID BUILDINGS & COLLISIONS
         // ==========================================
+        const collidableObjects = []; // We will check this array so you don't ghost through walls!
         
-        // This generates placeholder blocks. Later, you replace these with loaded 3D models!
-        const buildingGeo = new THREE.BoxGeometry(1, 1, 1);
-        const buildingMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+        const buildingMat = new THREE.MeshStandardMaterial({ color: 0x444455 });
+        for (let i = 0; i < 200; i++) {
+            const width = Math.random() * 15 + 10;
+            const height = Math.random() * 50 + 10;
+            const depth = Math.random() * 15 + 10;
+            
+            const building = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), buildingMat);
+            building.position.set((Math.random() - 0.5) * 400, height / 2, (Math.random() - 0.5) * 400);
+            
+            // Keep the center clear for spawning
+            if (Math.abs(building.position.x) < 30 && Math.abs(building.position.z) < 30) continue;
 
-        for (let i = 0; i < 300; i++) {
-            const building = new THREE.Mesh(buildingGeo, buildingMat);
-            
-            // Random sizes for skyscrapers and small shops
-            const width = Math.random() * 10 + 5;
-            const height = Math.random() * 40 + 10;
-            const depth = Math.random() * 10 + 5;
-            
-            building.scale.set(width, height, depth);
-            
-            // Random positions across the massive map
-            building.position.x = (Math.random() - 0.5) * 400;
-            building.position.z = (Math.random() - 0.5) * 400;
-            building.position.y = height / 2;
-            
             building.castShadow = true;
             building.receiveShadow = true;
+            scene.add(building);
             
-            // Create a simple street grid gap
-            if (Math.abs(building.position.x) > 20 && Math.abs(building.position.z) > 20) {
-                scene.add(building);
-            }
+            // Create a Bounding Box for Collision
+            const box3 = new THREE.Box3().setFromObject(building);
+            collidableObjects.push(box3);
         }
 
         // ==========================================
-        // CHARACTER SYSTEM & CONTROLLER
+        // CAR SYSTEM (Procedural Mesh for now)
         // ==========================================
+        const carGroup = new THREE.Group();
         
+        // Car Body
+        const carBody = new THREE.Mesh(new THREE.BoxGeometry(4, 1.5, 8), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+        carBody.position.y = 1;
+        carBody.castShadow = true;
+        carGroup.add(carBody);
+
+        // Wheels
+        const wheelGeo = new THREE.CylinderGeometry(0.8, 0.8, 0.5, 16);
+        wheelGeo.rotateZ(Math.PI / 2);
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x050505 });
+        
+        const positions = [ [-2.2, 0.8, 2.5], [2.2, 0.8, 2.5], [-2.2, 0.8, -2.5], [2.2, 0.8, -2.5] ];
+        positions.forEach(pos => {
+            const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+            wheel.position.set(...pos);
+            carGroup.add(wheel);
+        });
+
+        carGroup.position.set(10, 0, -15);
+        scene.add(carGroup);
+
+        // ==========================================
+        // PLAYER SYSTEM
+        // ==========================================
         const characters = {
-            1: { name: "Jace", color: 0xff0000, speed: 0.4 }, // Red, Fast
-            2: { name: "Emily", color: 0x00ff00, speed: 0.35 }, // Green, Nimble
-            3: { name: "Amelia", color: 0x0000ff, speed: 0.3 }, // Blue, Tactical
-            4: { name: "James", color: 0xffcc00, speed: 0.25 }  // Gold, Heavy tank
+            1: { name: "Jace", color: 0xff0000, speed: 0.4 },
+            2: { name: "Emily", color: 0x00ff00, speed: 0.4 },
+            3: { name: "Amelia", color: 0x0000ff, speed: 0.4 },
+            4: { name: "James", color: 0xffcc00, speed: 0.4 }
         };
-
         let currentPlayer = characters[1];
+        let isDriving = false;
 
-        // Player Mesh (Placeholder for real 3D models)
-        const playerGeo = new THREE.BoxGeometry(2, 4, 2);
-        let playerMat = new THREE.MeshStandardMaterial({ color: currentPlayer.color });
-        const player = new THREE.Mesh(playerGeo, playerMat);
-        player.position.y = 2;
+        const player = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), new THREE.MeshStandardMaterial({ color: currentPlayer.color }));
+        player.position.set(0, 2, 0);
         player.castShadow = true;
         scene.add(player);
 
-        // Camera setup (3rd Person Follow)
-        const cameraOffset = new THREE.Vector3(0, 10, -15);
+        const playerBox = new THREE.Box3(); // For player collisions
 
         // ==========================================
-        // INPUT CONTROLS
+        // CONTROLS & LOGIC
         // ==========================================
-        
-        const keys = { w: false, a: false, s: false, d: false };
+        const keys = { w: false, a: false, s: false, d: false, f: false };
+        let canToggleCar = true;
 
         window.addEventListener('keydown', (e) => {
             const key = e.key.toLowerCase();
             if (keys.hasOwnProperty(key)) keys[key] = true;
-
-            // Character Switching Logic
-            if (['1', '2', '3', '4'].includes(key)) {
-                switchCharacter(parseInt(key));
+            if (['1', '2', '3', '4'].includes(key) && !isDriving) switchCharacter(parseInt(key));
+            
+            // Enter/Exit Car Logic
+            if (key === 'f' && canToggleCar) {
+                const dist = player.position.distanceTo(carGroup.position);
+                if (dist < 10 || isDriving) {
+                    isDriving = !isDriving;
+                    player.visible = !isDriving; // Hide player when driving
+                    canToggleCar = false;
+                    setTimeout(() => canToggleCar = true, 1000); // Cooldown to prevent spamming
+                }
             }
         });
 
@@ -174,46 +150,101 @@
 
         function switchCharacter(id) {
             currentPlayer = characters[id];
-            
-            // Update UI
             document.getElementById('character-name').innerText = currentPlayer.name;
             document.getElementById('character-name').style.color = '#' + currentPlayer.color.toString(16).padStart(6, '0');
-            
-            // Update Player Model Color (This is where you'd swap the actual 3D mesh later)
             player.material.color.setHex(currentPlayer.color);
-            
-            console.log(`Switched to ${currentPlayer.name}.`); // Little debug log for us
+        }
+
+        function checkCollisions(targetBox) {
+            for (let i = 0; i < collidableObjects.length; i++) {
+                if (targetBox.intersectsBox(collidableObjects[i])) return true;
+            }
+            return false;
         }
 
         // ==========================================
-        // GAME LOOP (Physics & Rendering)
+        // REAL-TIME ENGINE LOOP
         // ==========================================
-        
+        let carSpeed = 0;
+
         function animate() {
             requestAnimationFrame(animate);
+            const prompt = document.getElementById('interaction-prompt');
 
-            // Basic Movement Logic
-            if (keys.w) player.translateZ(currentPlayer.speed);
-            if (keys.s) player.translateZ(-currentPlayer.speed);
-            if (keys.a) player.rotation.y += 0.05;
-            if (keys.d) player.rotation.y -= 0.05;
+            if (!isDriving) {
+                // PLAYER MOVEMENT (With Collision!)
+                const oldPos = player.position.clone();
+                if (keys.w) player.translateZ(currentPlayer.speed);
+                if (keys.s) player.translateZ(-currentPlayer.speed);
+                if (keys.a) player.rotation.y += 0.05;
+                if (keys.d) player.rotation.y -= 0.05;
 
-            // Update Camera to follow player (3rd Person view)
-            const relativeCameraOffset = cameraOffset.clone().applyMatrix4(player.matrixWorld);
-            camera.position.lerp(relativeCameraOffset, 0.1); // Smooth camera tracking
-            camera.lookAt(player.position);
+                // Check Wall Bump
+                playerBox.setFromObject(player);
+                if (checkCollisions(playerBox)) {
+                    player.position.copy(oldPos); // Reverse movement if hit wall
+                }
+
+                // Show Car prompt
+                prompt.style.display = (player.position.distanceTo(carGroup.position) < 10) ? 'block' : 'none';
+
+                // Camera follow player
+                const offset = new THREE.Vector3(0, 10, -15).applyMatrix4(player.matrixWorld);
+                camera.position.lerp(offset, 0.1);
+                camera.lookAt(player.position);
+            } else {
+                // CAR DRIVING PHYSICS
+                prompt.style.display = 'none';
+                
+                if (keys.w) carSpeed = Math.min(carSpeed + 0.02, 1.2); // Accelerate
+                else if (keys.s) carSpeed = Math.max(carSpeed - 0.02, -0.5); // Reverse
+                else carSpeed *= 0.95; // Friction
+
+                if (keys.a && Math.abs(carSpeed) > 0.1) carGroup.rotation.y += 0.04;
+                if (keys.d && Math.abs(carSpeed) > 0.1) carGroup.rotation.y -= 0.04;
+
+                const oldCarPos = carGroup.position.clone();
+                carGroup.translateZ(carSpeed);
+
+                // Car Collision Check
+                const carBox = new THREE.Box3().setFromObject(carGroup);
+                if (checkCollisions(carBox)) {
+                    carGroup.position.copy(oldCarPos);
+                    carSpeed = 0; // Crash! Stop the car
+                }
+
+                // Snap player to car so they pop out in the right spot
+                player.position.copy(carGroup.position);
+                player.position.y += 2;
+                player.position.x += 4; // Exit by the door
+
+                // Camera follow car
+                const offset = new THREE.Vector3(0, 15, -25).applyMatrix4(carGroup.matrixWorld);
+                camera.position.lerp(offset, 0.1);
+                camera.lookAt(carGroup.position);
+            }
 
             renderer.render(scene, camera);
         }
 
-        // Handle Window Resizing
+        // ==========================================
+        // EXTERNAL MODEL LOADER (For Later!)
+        // ==========================================
+        // When you find a cool .glb file, just uncomment this:
+        /*
+        const loader = new THREE.GLTFLoader();
+        loader.load('YOUR_MODEL_LINK_HERE.glb', function (gltf) {
+            scene.add(gltf.scene);
+        });
+        */
+
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        animate(); // Kick off the engine
+        animate();
     </script>
 </body>
 </html>
