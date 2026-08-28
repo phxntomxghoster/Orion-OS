@@ -492,5 +492,15 @@
         }
     });
 </script>
+<script>
+    // Catch ESC key inside the game frame and toggle parent PS5 Control Center
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (window.parent && typeof window.parent.toggleControlCenter === 'function') {
+                window.parent.toggleControlCenter();
+            }
+        }
+    });
+</script>
 </body>
 </html>
