@@ -5,25 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Orion OS - Pro Hub</title>
     
-    <!-- Dynamic PWA Manifest for School Laptop Install -->
-    <script>
-        const manifestData = {
-            name: "Orion OS Pro",
-            short_name: "OrionOS",
-            start_url: ".",
-            display: "standalone",
-            background_color: "#050505",
-            theme_color: "#ffffff",
-            icons: [{
-                src: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?q=80&w=192",
-                sizes: "192x192",
-                type: "image/png"
-            }]
-        };
-        const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
-        const manifestURL = URL.createObjectURL(manifestBlob);
-        document.write(`<link rel="manifest" href="${manifestURL}">`);
-    </script>
+    <link rel="manifest" href="manifest.json">
     
     <style>
         /* PS5 Pro Aesthetic: Matte darks, crisp whites, three-stripe motif, glass panels */
@@ -58,7 +40,7 @@
 
         #app-container { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; }
 
-        /* Sleek Boot / Auth Screen */
+        /* Sleek Boot / Auth Screen Overlay */
         #auth-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--pro-bg); z-index: 9999;
@@ -137,33 +119,30 @@
 </head>
 <body>
 
-    <!-- Pro Design Stripes -->
     <div class="pro-stripes"></div>
 
-    <!-- Auth / Boot Screen -->
     <div id="auth-screen">
         <div class="auth-card">
             <h1>ORION OS</h1>
             <p>PRO EDITION</p>
-            <input type="text" id="auth-username" placeholder="Username">
-            <input type="password" id="auth-password" placeholder="Password (Optional)">
-            <button onclick="login()">BOOT SYSTEM</button>
+            <input type="text" id="auth-username" placeholder="Username" onkeydown="if(event.key==='Enter') login()">
+            <input type="password" id="auth-password" placeholder="Password (Optional)" onkeydown="if(event.key==='Enter') login()">
+            <button type="button" onclick="login()">BOOT SYSTEM</button>
         </div>
     </div>
 
-    <!-- Main OS Interface -->
     <div id="app-container">
         <header class="hub-header">
             <div class="hub-nav">
                 <span class="active">Communication</span>
-                <span onclick="window.location.href='games.html'">Games Libary</span>
+                <span onclick="window.location.href='games.html'">Games Library</span>
             </div>
             
             <div class="sys-widgets">
                 <span id="active-user">User: Offline</span>
                 <span>Network: SECURE</span>
-                <button class="install-btn" id="install-btn">Install OS App</button>
-                <button class="play-btn" onclick="window.location.href='games.html'">Launch Games</button>
+                <button class="install-btn" id="install-btn" type="button">Install OS App</button>
+                <button class="play-btn" type="button" onclick="window.location.href='games.html'">Launch Games</button>
             </div>
         </header>
 
@@ -175,7 +154,7 @@
                     <div class="channel" onclick="switchChannel('# general-gaming', this)"># general-gaming</div>
                     <div class="channel" onclick="switchChannel('@ DMs', this)">@ Direct Messages</div>
                 </div>
-                <button class="btn-new-group" onclick="createGroup()">+ Create # Group</button>
+                <button class="btn-new-group" type="button" onclick="createGroup()">+ Create # Group</button>
             </div>
 
             <div class="chat-area">
@@ -188,146 +167,12 @@
                 </div>
                 <div class="chat-input-box">
                     <input type="text" id="chat-input" placeholder="Message # public-main..." onkeydown="if(event.key==='Enter') sendMessage()">
-                    <button onclick="sendMessage()">Send</button>
+                    <button type="button" onclick="sendMessage()">Send</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Sudo Terminal -->
     <div id="terminal-ui" onclick="document.getElementById('term-input').focus()">
         <div id="term-output" style="white-space: pre-wrap; font-size: 15px; margin-bottom: 10px;">Orion OS Kernel [Version 4.0.0]
-Security Override Console. Type 'help' for commands.</div>
-        <div style="display: flex;">
-            <span id="term-prompt">phxntom@Orion:~$</span>
-            <input type="text" id="term-input" class="term-input" autocomplete="off" onkeydown="handleTerminal(event)">
-        </div>
-    </div>
-
-    <script>
-        // =====================================
-        // Auth & Terminal Engine
-        // =====================================
-        let currentUser = localStorage.getItem('orion_user');
-        
-        if (currentUser) {
-            document.getElementById('auth-screen').style.display = 'none';
-            document.getElementById('active-user').innerText = `User: ${currentUser}`;
-        }
-
-        function login() {
-            const user = document.getElementById('auth-username').value.trim();
-            if (user) {
-                currentUser = user;
-                localStorage.setItem('orion_user', user);
-                document.getElementById('auth-screen').style.display = 'none';
-                document.getElementById('active-user').innerText = `User: ${currentUser}`;
-            }
-        }
-
-        // Terminal Trigger (Press `~` key to open)
-        window.addEventListener('keydown', (e) => {
-            if (e.key === '`' || e.key === '~') {
-                const term = document.getElementById('terminal-ui');
-                term.style.display = term.style.display === 'block' ? 'none' : 'block';
-                if (term.style.display === 'block') document.getElementById('term-input').focus();
-            }
-        });
-
-        function handleTerminal(e) {
-            if (e.key === 'Enter') {
-                const input = document.getElementById('term-input');
-                const out = document.getElementById('term-output');
-                const cmd = input.value.trim();
-                
-                out.innerText += `\n${currentUser \vert{}\vert{} 'phxntom'}@Orion:~$ ${cmd}`;
-
-                if (cmd.startsWith('sudo log in')) {
-                    const target = cmd.replace('sudo log in', '').trim();
-                    if (target) {
-                        currentUser = target;
-                        localStorage.setItem('orion_user', target);
-                        out.innerText += `\n[SUCCESS] Override active. Session hijacked to: ${target}`;
-                        document.getElementById('active-user').innerText = `User: ${currentUser}`;
-                    }
-                } else if (cmd === 'clear') {
-                    out.innerText = '';
-                } else if (cmd === 'exit') {
-                    document.getElementById('terminal-ui').style.display = 'none';
-                } else {
-                    out.innerText += `\nCommand not found: ${cmd}`;
-                }
-                
-                input.value = '';
-                document.getElementById('terminal-ui').scrollTop = document.getElementById('terminal-ui').scrollHeight;
-            }
-        }
-
-        // =====================================
-        // Safe Chat Engine
-        // =====================================
-        const badWords = ["badword", "curse", "hate", "toxic"]; // Expand this list as needed
-
-        function switchChannel(name, element) {
-            document.getElementById('current-channel').innerText = name;
-            document.getElementById('chat-input').placeholder = `Message ${name}...`;
-            document.querySelectorAll('.channel').forEach(c => c.classList.remove('active'));
-            element.classList.add('active');
-        }
-
-        function createGroup() {
-            const groupName = prompt("Enter new Group Chat name:");
-            if (groupName) {
-                const formatted = groupName.startsWith('#') ? groupName : '# ' + groupName;
-                const newDiv = document.createElement('div');
-                newDiv.className = 'channel';
-                newDiv.innerText = formatted;
-                newDiv.onclick = function() { switchChannel(formatted, this); };
-                document.getElementById('channel-list').appendChild(newDiv);
-            }
-        }
-
-        function sendMessage() {
-            const input = document.getElementById('chat-input');
-            let text = input.value.trim();
-            if (!text) return;
-
-            // Clean Filter Setup
-            badWords.forEach(word => {
-                const regex = new RegExp(word, "gi");
-                text = text.replace(regex, "****");
-            });
-
-            const chatHistory = document.getElementById('chat-history');
-            const bubble = document.createElement('div');
-            bubble.className = 'msg-bubble';
-            bubble.innerHTML = `<div class="msg-author">${currentUser \vert{}\vert{} 'phxntom'}</div>${text}`;
-            
-            chatHistory.appendChild(bubble);
-            input.value = '';
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-        }
-
-        // =====================================
-        // PWA Install Logic
-        // =====================================
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            document.getElementById('install-btn').style.display = 'block';
-        });
-
-        document.getElementById('install-btn').addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    document.getElementById('install-btn').style.display = 'none';
-                }
-                deferredPrompt = null;
-            }
-        });
-    </script>
-</body>
-</html>
+Security Override Console. Press ` (Tilde) to toggle. Type 'help' for commands.</div>
