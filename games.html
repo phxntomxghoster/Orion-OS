@@ -1,1 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Orion OS - Games Library</title>
+    
+    <style>
+        /* PS5 Pro Aesthetic: Matte darks, crisp whites, glass panels */
+        :root {
+            --pro-bg: #050505;
+            --pro-surface: #111111;
+            --pro-card-bg: rgba(20, 20, 20, 0.7);
+            --pro-accent: #ffffff;
+            --pro-stripe: rgba(255, 255, 255, 0.03);
+            --pro-text: #e0e0e0;
+            --pro-border: rgba(255, 255, 255, 0.08);
+            --pro-green: #00ff66;
+            --pro-orange: #ff9900;
+            --pro-red: #ff3333;
+        }
 
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; }
+
+        body {
+            background-color: var(--pro-bg);
+            color: var(--pro-text);
+            min-height: 100vh;
+            width: 100vw;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 30px 50px;
+        }
+
+        /* PS5 Pro Signature Stripes Background */
+        .pro-stripes {
+            position: fixed; top: 50%; left: 0; width: 100%; height: 120px;
+            transform: translateY(-50%);
+            background: linear-gradient(to bottom, transparent 20%, var(--pro-stripe) 20%, var(--pro-stripe) 30%, transparent 30%, transparent 45%, var(--pro-stripe) 45%, var(--pro-stripe) 55%, transparent 55%, transparent 70%, var(--pro-stripe) 70%, var(--pro-stripe) 80%, transparent 80%);
+            z-index: 0; pointer-events: none;
+        }
+
+        header {
+            position: relative; z-index: 10;
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;
+        }
+
+        .header-title { display: flex; align-items: center; gap: 15px; }
+        .header-title h1 { font-size: 28px; letter-spacing: 2px; font-weight: 300; color: #fff; }
+        .header-title span { font-size: 12px; color: #666; font-weight: bold; letter-spacing: 1px; }
+
+        .back-btn {
+            background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--pro-border);
+            padding: 10px 22px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.2s;
+            backdrop-filter: blur(10px);
+        }
+        .back-btn:hover { background: var(--pro-accent); color: black; border-color: var(--pro-accent); }
+
+        /* Filter Tabs */
+        .filter-bar {
+            position: relative; z-index: 10;
+            display: flex; gap: 15px; margin-bottom: 30px;
+        }
+        .filter-btn {
+            background: transparent; border: none; color: #666; font-weight: 600; font-size: 14px;
+            cursor: pointer; padding-bottom: 5px; transition: 0.2s;
+        }
+        .filter-btn.active { color: #fff; border-bottom: 2px solid var(--pro-accent); }
+        .filter-btn:hover:not(.active) { color: #aaa; }
+
+        /* Games Grid */
+        .games-grid {
+            position: relative; z-index: 10;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;
+            padding-bottom: 40px;
+        }
+
+        .game-card {
+            background: var(--pro-card-bg); backdrop-filter: blur(20px);
+            border: 1px solid var(--pro-border); border-radius: 14px;
+            overflow: hidden; transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+            display: flex; flex-direction: column; position: relative;
+        }
+
+        .game-card:hover {
+            transform: translateY(-7px);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+        }
+
+        /* Banner & Logo Visuals */
+        .game-banner {
+            height: 140px; width: 100%; position: relative;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Distinct Gradient Arts for Logo Tiles */
+        .banner-gcd { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .banner-fallin { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .banner-virus { background: linear-gradient(135deg, #ff0844 0%, #ffb199 100%); }
+        .banner-hero { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .banner-jujutsu { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+        .banner-eclipse { background: linear-gradient(135deg, #5ee7df 0%, #b490ca 100%); }
+
+        .game-logo {
+            font-size: 26px; font-weight: 900; text-transform: uppercase;
+            letter-spacing: 2px; color: #ffffff; text-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            padding: 10px 15px; text-align: center; line-height: 1.1;
+        }
+
+        .badge-rating {
+            position: absolute; top: 12px; right: 12px;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
+            color: #fff; font-size: 10px; font-weight: bold;
+            padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* Content Info */
+        .game-info { padding: 20px; display: flex; flex-direction: column; flex: 1; justify-content: space-between; }
+        
+        .game-header { margin-bottom: 12px; }
+        .game-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .game-genre { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+        
+        .game-desc { font-size: 12.5px; color: #aaa; line-height: 1.4; margin-bottom: 15px; }
+
+        .game-footer {
+            display: flex; align-items: center; justify-content: space-between;
+            border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; margin-top: auto;
+        }
+
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .status-ready { background-color: var(--pro-green); box-shadow: 0 0 8px var(--pro-green); }
+        .status-update { background-color: var(--pro-orange); box-shadow: 0 0 8px var(--pro-orange); }
+
+        .status-text { font-size: 11px; color: #ccc; font-weight: 600; display: flex; align-items: center; }
+
+        .launch-btn {
+            background: var(--pro-accent); color: #000; border: none;
+            padding: 8px 18px; border-radius: 6px; font-weight: bold; font-size: 12px;
+            cursor: pointer; transition: 0.2s;
+        }
+        .launch-btn:hover { background: #d0d0d0; transform: scale(1.03); }
+    </style>
+</head>
+<body>
+
+    <div class="pro-stripes"></div>
+
+    <header>
+        <div class="header-title">
+            <h1>GAMES LIBRARY</h1>
+            <span>ORION OS PRO</span>
+        </div>
+        <button class="back-btn" type="button" onclick="window.location.href='index.html'">← Back to Hub</button>
+    </header>
+
+    <div class="filter-bar">
+        <button class="filter-btn active" type="button">All Games</button>
+        <button class="filter-btn" type="button">Action / Open World</button>
+        <button class="filter-btn" type="button">Battleground / Survival</button>
+        <button class="filter-btn" type="button">Installed</button>
+    </div>
+
+    <div class="games-grid">
+
+        <!-- GCD VI Tile -->
+        <div class="game-card">
+            <div class="game-banner banner-gcd">
+                <div class="badge-rating">E 10+</div>
+                <div class="game-logo" style="font-family: 'Impact', sans-serif;">GCD VI</div>
+            </div>
+            <div class="game-info">
+                <div>
+                    <div class="game-header">
+                        <div class="game-title">GCD VI</div>
+                        <div class="game-genre">Open World / Sandbox</div>
+                    </div>
+                    <div class="game-desc">Kid-friendly open-world action. Cruise Vice City streets, execute high-stakes stunts, and build your crew empire.</div>
+                </div>
+                <div class="game-footer">
+                    <span class="status-text"><span class="status-dot status-ready"></span>Ready to Play</span>
+                    <button class="launch-btn" type="button" onclick="launchGame('GCD VI')">LAUNCH</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fallin Bomb Shell Tile -->
+        <div class="game-card">
+            <div class="game-banner banner-fallin">
+                <div class="badge-rating">T for Teen</div>
+                <div class="game-logo" style="font-family: 'Trebuchet MS', sans-serif; letter-spacing: 0px;">FALLIN BOMB SHELL 76</div>
+            </div>
+            <div class="game-info">
+                <div>
+                    <div class="game-header">
+                        <div class="game-title">Fallin Bomb Shell</div>
+                        <div class="game-genre">Post-Apocalyptic RPG</div>
+                    </div>
+                    <div class="game-desc">Emerge from the fallout shelters! Rebuild the wasteland, scavenge rare gear, and battle mutant hordes online.</div>
+                </div>
+                <div class="game-footer">
+                    <span class="status-text"><span class="status-dot status-ready"></span>Ready to Play</span>
+                    <button class="launch-btn" type="button" onclick="launchGame('Fallin Bomb Shell')">LAUNCH</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Virus Infection Tile -->
+        <div class="game-card">
+            <div class="game-banner banner-virus">
+                <div class="badge-rating">T for Teen</div>
+                <div class="game-logo" style="font-family: 'Arial Black', sans-serif;">VIRUS INFECTION</div>
+            </div>
+            <div class="game-info">
+                <div>
+                    <div class="game-header">
+                        <div class="game-title">Virus Infection</div>
+                        <div class="game-genre">Tactical Shooter / Loot RPG</div>
+                    </div>
+                    <div class="game-desc">A tactical collapse in Washington D.C. Team up with agents to reclaim quarantine zones and stop the outbreak.</div>
+                </div>
+                <div class="game-footer">
+                    <span class="status-text"><span class="status-dot status-update"></span>Patch v1.04</span>
+                    <button class="launch-btn" type="button" onclick="launchGame('Virus Infection')">LAUNCH</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Counter Attack 2 -->
+        <div class="game-card">
+            <div class="game-banner banner-hero">
+                <div class="badge-rating">E 10+</div>
+                <div class="game-logo" style="font-family: 'Segoe UI', sans-serif; font-weight: 900;">Counter Attack 2</div>
+            </div>
+            <div class="game-info">
+                <div>
+                    <div class="game-header">
+                        <div class="game-title">Counter Attack 2</div>
+                        <div class="game-genre">Shooter Arena</div>
+                    </div>
+                    <div class="game-desc">Counter Attack 2 is a E 10+ game, being a fun and family friendly shooter.</div>
+                </div>
+                <div class="game-footer">
+                    <span class="status-text"><span class="status-dot status-ready"></span>Ready to Play</span>
+                    <button class="launch-btn" type="button" onclick="launchGame('Counter Attack 2')">LAUNCH</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Player Known's Battle Arena Tile -->
+        <div class="game-card">
+            <div class="game-banner banner-jujutsu">
+                <div class="badge-rating">E 10+</div>
+                <div class="game-logo" style="font-family: 'Courier New', monospace; font-weight: 900;">Player Known's Battle Arena</div>
+            </div>
+            <div class="game-info">
+                <div>
+                    <div class="game-header">
+                        <div class="game-title">Player Known's Battle Arena</div>
+                        <div class="game-genre">PvP</div>
+                    </div>
+                    <div class="game-desc">Master your fighting skills today.</div>
+                </div>
+                <div class="game-footer">
+                    <span class="status-text"><span class="status-dot status-ready"></span>Ready to Play</span>
+                    <button class="launch-btn" type="button" onclick="launchGame('Player Known's Battle Arena')">LAUNCH</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- World of Seas / Eclipse Legion Tile -->
+        <div class="game-card">
+            <div class="game-banner banner-eclipse">
+                <div class="badge-rating">T for Teen</div>
+                <div class="game-logo" style="font-family: 'Lucida Console', monospace;">ECLIPSE LEGION</div>
+            </div>
+            <div class="game-info">
+                <div>
+                    <div class="game-header">
+                        <div class="game-title">Eclipse Legion</div>
+                        <div class="game-genre">PvP</div>
+                    </div>
+                    <div class="game-desc">Fight with whatever you can get, because the apocolypse is soon.</div>
+                </div>
+                <div class="game-footer">
+                    <span class="status-text"><span class="status-dot status-ready"></span>Ready to Play</span>
+                    <button class="launch-btn" type="button" onclick="launchGame('Eclipse Legion')">LAUNCH</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function launchGame(gameTitle) {
+            alert(`Booting up ${gameTitle} on Orion OS...`);
+        }
+    </script>
+</body>
+</html>
