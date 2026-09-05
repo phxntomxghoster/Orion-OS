@@ -121,6 +121,7 @@
 
     <div class="pro-stripes"></div>
 
+    <!-- Login/Boot Screen -->
     <div id="auth-screen">
         <div class="auth-card">
             <h1>ORION OS</h1>
@@ -131,6 +132,7 @@
         </div>
     </div>
 
+    <!-- Main OS Interface -->
     <div id="app-container">
         <header class="hub-header">
             <div class="hub-nav">
@@ -173,6 +175,73 @@
         </div>
     </div>
 
-    <div id="terminal-ui" onclick="document.getElementById('term-input').focus()">
-        <div id="term-output" style="white-space: pre-wrap; font-size: 15px; margin-bottom: 10px;">Orion OS Kernel [Version 4.0.0]
-Security Override Console. Press ` (Tilde) to toggle. Type 'help' for commands.</div>
+    <div id="terminal-ui" onclick="document.getElementById('term-input').focus()"></div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        let currentUser = "";
+
+        function login() {
+            const usernameInput = document.getElementById('auth-username').value.trim();
+            
+            if (!usernameInput) {
+                alert("Please enter a username!");
+                return;
+            }
+
+            currentUser = usernameInput;
+
+            // Update user tag in header
+            document.getElementById('active-user').innerText = `User: ${currentUser}`;
+
+            // Fade out and remove the auth screen overlay
+            const authScreen = document.getElementById('auth-screen');
+            authScreen.style.opacity = '0';
+            authScreen.style.transition = 'opacity 0.4s ease';
+            
+            setTimeout(() => {
+                authScreen.style.display = 'none';
+            }, 400);
+        }
+
+        function switchChannel(channelName, element) {
+            document.querySelectorAll('.channel').forEach(c => c.classList.remove('active'));
+            element.classList.add('active');
+            document.getElementById('current-channel').innerText = channelName;
+            document.getElementById('chat-input').placeholder = `Message ${channelName}...`;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const messageText = input.value.trim();
+
+            if (!messageText) return;
+
+            const chatHistory = document.getElementById('chat-history');
+            const msgBubble = document.createElement('div');
+            msgBubble.className = 'msg-bubble';
+            msgBubble.innerHTML = `
+                <div class="msg-author">${currentUser || 'Anonymous'}</div>
+                <div>${messageText}</div>
+            `;
+
+            chatHistory.appendChild(msgBubble);
+            input.value = '';
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function createGroup() {
+            const groupName = prompt("Enter new channel name:");
+            if (groupName) {
+                const channelList = document.getElementById('channel-list');
+                const newChannel = document.createElement('div');
+                newChannel.className = 'channel';
+                const formattedName = groupName.startsWith('#') ? groupName : `# ${groupName}`;
+                newChannel.innerText = formattedName;
+                newChannel.onclick = function() { switchChannel(formattedName, this); };
+                channelList.appendChild(newChannel);
+            }
+        }
+    </script>
+</body>
+</html>
